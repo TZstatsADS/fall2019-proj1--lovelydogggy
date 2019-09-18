@@ -1,0 +1,267 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+## Overview
+The project intends to analyze the lyric length and the emotions lyrics express. There are two dimensions to be taken into account: time slot and lyric type. By comparing these two dimensions, we could find the song lyric developing trend over past 40-50 years.
+
+## Step 1: Import package for projects
+```{r, message=FALSE, warning=FALSE}
+packages.used=c("rvest", "tibble", "qdap", 
+                "sentimentr", "gplots", "dplyr",
+                "tm", "syuzhet", "factoextra", 
+                "beeswarm", "scales", "RColorBrewer",
+                "RANN", "tm", "topicmodels")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                                  packages.used))
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+# load packages
+library("rvest")
+library("tibble")
+# You may need to run
+# sudo ln -f -s $(/usr/libexec/java_home)/jre/lib/server/libjvm.dylib /usr/local/lib
+# in order to load qdap
+library("qdap")
+library("sentimentr")
+library("gplots")
+library("dplyr")
+library("tm")
+library("syuzhet")
+library("factoextra")
+library("beeswarm")
+library("scales")
+library("RColorBrewer")
+library("RANN")
+library("tm")
+library("topicmodels")
+library("data.table")
+```
+
+## Step 2: Load lyrics data -- "dt_artist" & "dt_lyrics"
+We load the dataset that contains the information of artists and song lyrics.
+```{r}
+# load lyrics data
+load('../output/processed_lyrics.RData') 
+# load artist information
+dt_artist <- fread('../data/artists.csv') 
+```
+
+## Step 3: Calculate the word count of every lyric
+We calculate the word length of every song lyric, then try to find length distributions over different types of lyrics and different time periods to explore the development of lyrics.
+```{r}
+#dt_lyrics$wordcount=NULL
+dt_lyrics$wordcount=word_count(dt_lyrics$lyrics)
+dt_lyrics$prefix=substr(dt_lyrics$year,1,3)
+```
+
+## Step 4: Overview of lyric length distribution by different types of lyrics and different time periods.
+We split the time slot into two parts: before 2000(including 1970s, 1980s and 1990s) and 2010s, which represents classical music annd modern music style.
+
+As the plots demonstrate, we find that Indie lyrics is the smallest part among all lyric styles. They did not appear before 2000, and accounts for the least percentage over all lyrics in 2010s.
+
+Looking into the length distribution among different types of lyrics, we could find that the most lyric lengths are less than 1000, and the longest lyrics belong to Rock and Hip-hop. For most types, the lyric lengths have an uniform distribution over 0-1000 words; while Rock and Pop seem to have more short lengths(around 0-300). 
+
+Referring to different time periods, we could find that the lyric distribution is almost the same.
+```{r, fig.width = 6, fig.height = 6}
+
+par(mar=c(4, 6, 2, 2))
+
+#sel.comparison=levels(sentence.list$FileOrdered)
+dt_lyrics$genre=factor(dt_lyrics$genre)
+lyrics.sel=filter(dt_lyrics, 
+                       prefix %in% c("197","198","199"))
+
+lyrics.sel$ordered=reorder(lyrics.sel$genre, 
+                                  lyrics.sel$wordcount, 
+                                  mean, 
+                                  order=T)
+
+beeswarm(wordcount~ordered, 
+         data=lyrics.sel,
+         horizontal = TRUE, 
+         pch=12, col=alpha(brewer.pal(9, "Set1"), 0.6), 
+         cex=0.55, cex.axis=0.8, cex.lab=0.8,
+         spacing=1/nlevels(lyrics.sel$ordered),
+         las=2, xlab="Number of words in a song.", ylab="",
+         main="Lyrics before 2000")
+```
+
+```{r, fig.width = 6, fig.height = 6}
+par(mar=c(4, 6, 2, 2))
+
+#sel.comparison=levels(sentence.list$FileOrdered)
+dt_lyrics$genre=factor(dt_lyrics$genre)
+lyrics.sel=filter(dt_lyrics, 
+                       prefix %in% c("201"))
+
+lyrics.sel$ordered=reorder(lyrics.sel$genre, 
+                                  lyrics.sel$wordcount, 
+                                  mean, 
+                                  order=T)
+
+beeswarm(wordcount~ordered, 
+         data=lyrics.sel,
+         horizontal = TRUE, 
+         pch=12, col=alpha(brewer.pal(9, "Set1"), 0.6), 
+         cex=0.55, cex.axis=0.8, cex.lab=0.8,
+         spacing=0.7/nlevels(lyrics.sel$ordered),
+         las=2, xlab="Number of words in a song.", ylab="",
+         main="Lyrics in 2010s")
+```
+
+## Step 5: Sentiment Analysis on different types of lyrics and different time periods
+Sentiment Analysis on lyrics could show what kind of emotion they perform.
+
+We find that lyric emotions before 2000 and on 2010s have nearly the same distribution. Two graphs both tell us that joy, anticipation and trust appear most on lyrics, while anger, surprise and disgust are the least frequent. That might beacuse the popular songs intend to express "positive" feelings and try to bring listeners more joy.
+
+Looking carefully, we might observe that the frequency of different emotions becomes closer on 2010s compared to past times. The index of joy, anticipation and trust slightly drop, but fear, surprise and disgust(which would be seen as "negative" feelings) appear more on 2010s. That might reflect on the "social trends": People tend to be more complex and under more pressure.
+```{r}
+lyrics.sel2=filter(dt_lyrics, prefix %in% c("197","198","199"))
+lyrics.list=NULL
+for(i in 1:nrow(lyrics.sel2)){
+  lyrics=lyrics.sel2$lyrics[i]
+  if(lyrics.sel2$wordcount[i]>0){
+    emotions=get_nrc_sentiment(lyrics)
+    emotions=as.matrix(emotions)/lyrics.sel2$wordcount[i]
+    lyrics.list=rbind(lyrics.list, 
+                        cbind(lyrics.sel2[i,],
+                              emotions
+                              )
+    )
+  }
+}
+```
+
+```{r}
+lyrics.list=na.omit(lyrics.list)
+genre.list=c("Folk", "R&B", "Electronic", "Jazz", "Indie", "Country", "Rock", "Metal", "Pop", "Hip-Hop", "Other")
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(lyrics.list, anger:trust)>0.01)
+col.use=c("red2", "darkgoldenrod1", 
+            "chartreuse3", "blueviolet",
+            "darkgoldenrod2", "dodgerblue3", 
+            "darkgoldenrod1", "darkgoldenrod1")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main="Lyric emotions before 2000")
+```
+
+```{r}
+lyrics.sel3=filter(dt_lyrics, prefix %in% c("201"))
+lyrics.list2=NULL
+for(i in 1:nrow(lyrics.sel3)){
+  lyrics=lyrics.sel3$lyrics[i]
+  if(lyrics.sel3$wordcount[i]>0){
+    emotions=get_nrc_sentiment(lyrics)
+    emotions=as.matrix(emotions)/lyrics.sel3$wordcount[i]
+    lyrics.list2=rbind(lyrics.list2, 
+                        cbind(lyrics.sel3[i,],
+                              emotions
+                              )
+    )
+  }
+}
+```
+
+```{r}
+lyrics.list2=na.omit(lyrics.list2)
+genre.list=c("Folk", "R&B", "Electronic", "Jazz", "Indie", "Country", "Rock", "Metal", "Pop", "Hip-Hop", "Other")
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(lyrics.list2, anger:trust)>0.01)
+col.use=c("red2", "darkgoldenrod1", 
+            "chartreuse3", "blueviolet",
+            "darkgoldenrod2", "dodgerblue3", 
+            "darkgoldenrod1", "darkgoldenrod1")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main="Lyric emotions on 2010s")
+```
+
+## Step 6: Clustering of Emotions
+By the clustering of emotions hidden in different lyrics, lyric styles that perform similar emotions would be regarded as "similar kind", and might have similar listeners.
+
+The next two plots imply that Metal is quite different from other types of lyrics.
+```{r, fig.height=5, fig.width=5}
+presid.summary=tbl_df(lyrics.list)%>%
+  filter(genre%in%genre.list)%>%
+  #group_by(paste0(type, File))%>%
+  group_by(genre)%>%
+  summarise(
+    anger=mean(anger),
+    anticipation=mean(anticipation),
+    disgust=mean(disgust),
+    fear=mean(fear),
+    joy=mean(joy),
+    sadness=mean(sadness),
+    surprise=mean(surprise),
+    trust=mean(trust)
+    #negative=mean(negative),
+    #positive=mean(positive)
+  )
+
+presid.summary=as.data.frame(presid.summary)
+rownames(presid.summary)=as.character((presid.summary[,1]))
+km.res=kmeans(presid.summary[,-1], iter.max=200,3)
+fviz_cluster(km.res, 
+             stand=F, repel= TRUE,
+             data = presid.summary[,-1], xlab="", xaxt="n",
+             show.clust.cent=FALSE)
+```
+
+```{r, fig.height=5, fig.width=5}
+presid.summary=tbl_df(lyrics.list2)%>%
+  filter(genre%in%genre.list)%>%
+  #group_by(paste0(type, File))%>%
+  group_by(genre)%>%
+  summarise(
+    anger=mean(anger),
+    anticipation=mean(anticipation),
+    disgust=mean(disgust),
+    fear=mean(fear),
+    joy=mean(joy),
+    sadness=mean(sadness),
+    surprise=mean(surprise),
+    trust=mean(trust)
+    #negative=mean(negative),
+    #positive=mean(positive)
+  )
+
+presid.summary=as.data.frame(presid.summary)
+rownames(presid.summary)=as.character((presid.summary[,1]))
+km.res=kmeans(presid.summary[,-1], iter.max=200,3)
+fviz_cluster(km.res, 
+             stand=F, repel= TRUE,
+             data = presid.summary[,-1], xlab="", xaxt="n",
+             show.clust.cent=FALSE)
+```
+
+## Step 7: Deep look into Metal Lyrics
+When only looking into metal lyrics, we find that the emotions expressed by metal are mostly fear, sadnness and anger, which is totally opposite from overall emotions. That tells us that metal could be seen as a kind of "radical" music, and the lyrics would express "bad" emotions bravely and undisguisedly.
+```{r}
+metal1=filter(lyrics.list, genre=="Metal", prefix %in% c("197","198","199"))
+metal2=filter(lyrics.list2, genre=="Metal", prefix %in% c("201"))
+metal=rbind(metal1, metal2)
+
+par(mar=c(4, 6, 2, 1))
+emo.means=colMeans(select(metal, anger:trust)>0.01)
+col.use=c("red2", "darkgoldenrod1", 
+            "chartreuse3", "blueviolet",
+            "darkgoldenrod2", "dodgerblue3", 
+            "darkgoldenrod1", "darkgoldenrod1")
+barplot(emo.means[order(emo.means)], las=2, col=col.use[order(emo.means)], horiz=T, main="Metal Lyric emotions")
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
