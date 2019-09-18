@@ -12,7 +12,7 @@ Term: Fall 2019
 + Projec title: Developing trend of song lyrics over past 40 years
 + This project is conducted by [Chongyu He(ch3379)](doc/)
 
-+ Project summary: [a short summary] Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
++ Project summary: The project intends to analyze the lyric length and the emotions lyrics expressover past 40-50 years. By comparing lyric length and lyric emotions over different time slost and lyric types, we could find how the song lyrics change over these years, and predict what the future would be.
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
