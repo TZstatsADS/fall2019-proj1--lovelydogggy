@@ -1,14 +1,14 @@
 # ADS Project 1:  R Notebook on Lyrics Analysis
 
-### Doc folder
+## Doc folder
 
 The doc directory contains the report or presentation files. It can have subfolders. 
 
 The file Text_Processing.Rmd contains code that deals with original dataset lyrics.Rdata, and Project1_ch3379 performs the whole analysis over the developing trend of song lyrics.
 
-### Data story
+## Data story
 
-#### Lyric length
+### Lyric length
 We split the time slot into two parts: before 2000(including 1970s, 1980s and 1990s) and 2010s, which represents classical music annd modern music style.
 
 As the plots demonstrate, we find that Indie lyrics is the smallest part among all lyric styles. They did not appear before 2000, and accounts for the least percentage over all lyrics in 2010s.
@@ -17,7 +17,7 @@ Looking into the length distribution among different types of lyrics, we could f
 
 Referring to different time periods, we could find that the overall lyric length distribution is almost the same.
 
-#### Lyric Emotions
+### Lyric Emotions
 Sentiment Analysis on lyrics could show what kind of emotion they perform.
 
 Lyric emotions before 2000 and on 2010s have nearly the same distribution. Two graphs both tell us that joy, anticipation and trust appear most on lyrics, while anger, surprise and disgust are the least frequent. That might beacuse the popular songs intend to express "positive" feelings and try to bring listeners more joy.
